@@ -1,0 +1,133 @@
+create database airline;
+use airline;
+
+create table AIRCRAFT (
+		aid int,
+        aname varchar(20),
+        cruising_range int,
+        primary key(aid)
+);
+
+create table FLIGHTS(
+	flno int,
+    ffrom varchar(20),
+    tto varchar(20),
+    distance int,
+    departs time,
+    arrives time,
+    price int,
+    aid int,
+    primary key(flno,aid),
+    foreign key(aid) references AIRCRAFT(aid)
+);
+
+create table EMPLOYEE (
+		eid int, 
+        ename varchar(20),
+        salary int,
+        primary key(eid)
+);
+
+create table CERTIFIED (
+		eid int,
+        aid int,
+        primary key(eid,aid),
+        foreign key(eid) references EMPLOYEE(eid),
+        foreign key(aid) references AIRCRAFT(aid)
+);
+
+desc AIRCRAFT;
+desc FLIGHTS;
+desc EMPLOYEE;
+desc CERTIFIED;
+
+insert into AIRCRAFT values ("1232","Boeing737",3000);
+insert into AIRCRAFT values ("5533","Indigo101",2500);
+insert into AIRCRAFT values ("9303","Emirates404",3000);
+insert into AIRCRAFT values ("8731","Boeing737",1500);
+insert into AIRCRAFT values ("0391","JetAir412",500);
+
+insert into EMPLOYEE values (1111,"Anirudh",3000000);
+insert into EMPLOYEE values (2222,"Rahul",500000);
+insert into EMPLOYEE values (3333,"Lokesh",10000);
+insert into EMPLOYEE values (4444,"Tarun",50000);
+insert into EMPLOYEE values (5555,"Amarnath",40000);
+insert into EMPLOYEE values (6666,"Aditya",68000);
+
+insert into CERTIFIED values (1111,"1232");
+truncate CERTIFIED;
+insert into CERTIFIED values (2222,"1232");
+insert into CERTIFIED values (2222,"5533");
+insert into CERTIFIED values (2222,"9303");
+insert into CERTIFIED values (2222,"8731");
+insert into CERTIFIED values (2222,"0391");
+insert into CERTIFIED values (3333,"1232");
+insert into CERTIFIED values (3333,"5533");
+insert into CERTIFIED values (3333,"9303");
+insert into CERTIFIED values (4444,"0391");
+insert into CERTIFIED values (5555,"8731");
+insert into CERTIFIED values (6666,"5533");
+insert into CERTIFIED values (6666,"9303");
+
+insert into FLIGHTS values (1,'Bengaluru','Frankfurt',3000,'12:00:00','21:25:00',50000,"1232");
+insert into FLIGHTS values (2,'Madison','New York',5000,'13:00:00','17:55:00',9000,"5533");
+insert into FLIGHTS values (3,'Hyderabad','Muscat',3000,'11:00:00','14:00:00',9900,"9303");
+insert into FLIGHTS values (4,'Bengaluru','Vizag',750,'13:00:00','15:45:00',2000,"8731");
+insert into FLIGHTS values (5,'Mumbai','Delhi',1500,'16:00:00','19:10:00',3500,"0391");
+UPDATE FLIGHTS set tto = "Delhi" where flno = 4;
+commit;
+select * from AIRCRAFT;
+select * from EMPLOYEE;
+select * from CERTIFIED;
+select * from FLIGHTS;
+select a.aname from aircraft a,employee e,certified c where e.eid = c.eid and c.aid = a.aid and e.salary > 80000; 
+select DISTINCT e.ename from EMPLOYEE e,AIRCRAFT a,CERTIFIED c where e.eid = c.eid AND a.aid = c.aid AND a.aname like 'Boeing%'; 
+select a.aid from AIRCRAFT a, FLIGHTS f where f.ffrom = "Bengaluru" and f.tto="Delhi";
+select a.aname , avg(e.salary) from AIRCRAFT a, EMPLOYEE e, CERTIFIED c where c.eid = e.eid and a.aid = c.aid and a.cruising_range>999 group by a.aid;
+select c.eid,count(c.eid),a.cruising_range from employee e,aircraft a,certified c where a.aid = c.aid and e.eid = c.eid having count(c.eid) > 2 ;
+SELECT A.aid
+FROM AIRCRAFT A
+WHERE A.cruising_range >( SELECT  min(F.distance)
+			FROM FLIGHTS F
+			WHERE F.ffrom = "Bengaluru" AND F.tto = "Frankfurt" );
+SELECT E.ename, E.salary
+FROM EMPLOYEE E
+WHERE E.eid NOT IN ( SELECT DISTINCT C.eid
+ FROM Certified C )
+AND E.salary >( SELECT AVG (E1.salary)
+ FROM EMPLOYEE E1
+ WHERE E1.eid IN
+( SELECT DISTINCT C1.eid
+ FROM CERTIFIED C1 ) );
+
+SELECT DISTINCT E.ename
+FROM employee E
+WHERE E.salary < (SELECT MIN(F.price)
+		 FROM flights F
+		 WHERE F.ffrom= 'Bengaluru' AND F.tto = 'Frankfurt');
+		 
+SELECT F.departs
+FROM Flights F
+WHERE F.flno IN ( ( SELECT F0.flno
+ FROM Flights F0
+ WHERE F0.ffrom = ‘Bangalore’ AND F0.tto = ‘Delhi’
+ AND extract(hour from F0.arrives) < 18 )
+ UNION
+( SELECT F0.flno
+ FROM Flights F0, Flights F1
+ WHERE F0.ffrom = ‘Bangalore’ AND F0.tto <> ‘Delhi’
+ AND F0.tto = F1.ffrom AND F1.tto = ‘Delhi’
+ AND F1.departs > F0.arrives
+ AND extract(hour from F1.arrives) < 18)
+ UNION
+( SELECT F0.flno
+ FROM Flights F0, Flights F1, Flights F2
+ WHERE F0.ffrom = ‘Bangalore’
+ AND F0.tto = F1.ffrom
+ AND F1.tto = F2.ffrom
+ AND F2.tto = ‘Delhi’
+ AND F0.tto <> ‘Delhi’
+ AND F1.tto <> ‘Delhi’
+ AND F1.departs > F0.arrives
+ AND F2.departs > F1.arrives
+ AND extract(hour from F2.arrives) < 18));
